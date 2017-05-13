@@ -6,15 +6,16 @@ import (
 	"fmt"
 	"encoding/json"
 	"io/ioutil"
-	"qiniupkg.com/api.v7/conf"
-	"qiniupkg.com/api.v7/kodo"
-	"qiniupkg.com/api.v7/kodocli"
 	"bytes"
 	"crypto/sha256"
 	"io"
 	"encoding/hex"
 	"strings"
 	"net/http"
+
+	"qiniupkg.com/api.v7/conf"
+	"qiniupkg.com/api.v7/kodo"
+	"qiniupkg.com/api.v7/kodocli"
 	"qiniupkg.com/x/errors.v7"
 )
 
@@ -24,7 +25,7 @@ func main() {
 		return
 	}
 	if (len(os.Args) < 2) {
-		fmt.Println("Please input file path")
+		fmt.Println("Please input file path or url")
 		return
 	}
 	path := os.Args[1]
@@ -51,15 +52,36 @@ var config struct{
 }
 
 func upload(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
+	var buffer []byte
 
-	buffer, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
+	if strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "http://") {
+		client := http.Client{}
+		req, err := http.NewRequest("GET", path, nil)
+		if err != nil {
+			return "", err
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			return "", err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return "", errors.New(fmt.Sprintf("%v return %v", path, resp.StatusCode))
+		}
+		buffer, err = ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return "", err
+		}
+	} else {
+		file, err := os.Open(path)
+		if err != nil {
+			return "", err
+		}
+		buffer, err = ioutil.ReadAll(file)
+		file.Close()
+		if err != nil {
+			return "", err
+		}
 	}
 
 	reader := bytes.NewReader(buffer)
