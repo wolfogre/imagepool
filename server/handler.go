@@ -17,7 +17,11 @@ type MainHandler struct {
 }
 
 func (h *MainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[%v] [%v] [%v]\n", r.RemoteAddr, r.Method, r.RequestURI)
+	ip := r.Header.Get("X-Real-IP")
+	if ip == "" {
+		ip = r.RemoteAddr
+	}
+	log.Printf("[%v] [%v] [%v]\n", ip, r.Method, r.RequestURI)
 	switch r.Method {
 	case "HEAD":
 		h.ServeHead(w, r)
