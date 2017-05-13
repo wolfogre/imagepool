@@ -57,9 +57,15 @@ func (h *MainHandler) ServeHead(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MainHandler) ServeGet(w http.ResponseWriter, r *http.Request) {
-	if r.RequestURI == "" {
+	if r.RequestURI == "/" {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404 - Not Found\n"))
+		return
+	}
+
+	if r.RequestURI == "/_status" {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("200 - OK\n"))
 		return
 	}
 
