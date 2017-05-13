@@ -11,6 +11,8 @@ import (
 	"qiniupkg.com/api.v7/conf"
 )
 
+// TODO 添加资源回收的逻辑
+
 func main() {
 	access := flag.String("access", "", "Access key")
 	secret := flag.String("secret", "", "Secret key")
