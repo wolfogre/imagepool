@@ -110,8 +110,8 @@ func (h *MainHandler) ServeDefault(w http.ResponseWriter, r *http.Request) {
 func makePrivateUrl(client *kodo.Client, baseUrl string) string{
 	now := time.Now()
 	zero := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	expires := 24 * 60 * 60 // one day
-	deadline :=  zero + expires
+	var expires int64 = 24 * 60 * 60 // one day
+	deadline := zero.Unix() + expires
 
 	if strings.Contains(baseUrl, "?") {
 		baseUrl += "&e="
