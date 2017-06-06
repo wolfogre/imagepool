@@ -10,6 +10,7 @@ import (
 	"strings"
 	"strconv"
 	"qiniupkg.com/api.v7/auth/qbox"
+	"sync"
 )
 
 type MainHandler struct {
@@ -17,6 +18,8 @@ type MainHandler struct {
 	Redis  *redis.Client
 	Domain string
 	Bucket string
+	StatusCount int
+	StatusCountLock sync.Mutex
 }
 
 func (h *MainHandler) ServeHTTP(ow http.ResponseWriter, r *http.Request) {
@@ -29,6 +32,20 @@ func (h *MainHandler) ServeHTTP(ow http.ResponseWriter, r *http.Request) {
 	default:
 		h.ServeDefault(w, r)
 	}
+
+	// Log _status per 1000
+	if r.RequestURI == "/_status" {
+		h.StatusCountLock.Lock()
+		if h.StatusCount > 1000 {
+			h.StatusCount = 0
+			h.StatusCountLock.Unlock()
+		} else {
+			h.StatusCount++
+			h.StatusCountLock.Unlock()
+			return
+		}
+	}
+
 	ip := r.Header.Get("X-Real-IP")
 	if ip == "" {
 		ip = r.RemoteAddr
