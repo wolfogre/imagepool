@@ -7,6 +7,9 @@ import (
 
 	"qiniupkg.com/api.v7/kodo"
 	"github.com/go-redis/redis"
+	"strings"
+	"strconv"
+	"qiniupkg.com/api.v7/auth/qbox"
 )
 
 type MainHandler struct {
@@ -93,7 +96,7 @@ func (h *MainHandler) ServeGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := h.Kodo.MakePrivateUrl(kodo.MakeBaseUrl(h.Domain, key), &kodo.GetPolicy{})
+	url := makePrivateUrl(h.Kodo, kodo.MakeBaseUrl(h.Domain, key))
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 	return
 }
@@ -101,4 +104,22 @@ func (h *MainHandler) ServeGet(w http.ResponseWriter, r *http.Request) {
 func (h *MainHandler) ServeDefault(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusMethodNotAllowed)
 	w.Write([]byte("405 - Method Not Allowed\n"))
+}
+
+// Like kodo.Client{}.MakePrivateUrl()
+func makePrivateUrl(client *kodo.Client, baseUrl string) string{
+	now := time.Now()
+	zero := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	expires := 24 * 60 * 60 // one day
+	deadline :=  zero + expires
+
+	if strings.Contains(baseUrl, "?") {
+		baseUrl += "&e="
+	} else {
+		baseUrl += "?e="
+	}
+	baseUrl += strconv.FormatInt(deadline, 10)
+
+	token := qbox.Sign(qbox.NewMac(client.AccessKey, client.SecretKey), []byte(baseUrl))
+	return baseUrl + "&token=" + token
 }
