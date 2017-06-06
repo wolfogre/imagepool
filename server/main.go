@@ -9,6 +9,7 @@ import (
 	"github.com/go-redis/redis"
 	"qiniupkg.com/api.v7/kodo"
 	"qiniupkg.com/api.v7/conf"
+	"time"
 )
 
 // TODO 添加资源回收的逻辑
@@ -37,6 +38,10 @@ func main() {
 	})
 	kc := kodo.New(0, nil)
 
+
+	log.SetFlags(0)
+	log.SetOutput(NewLogWriter{})
+
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), &MainHandler{
 		Kodo: kc,
 		Redis: rc,
@@ -45,4 +50,9 @@ func main() {
 	}))
 }
 
+type NewLogWriter struct{}
+
+func (h NewLogWriter) Write(bytes []byte) (int, error) {
+	return fmt.Print(time.Now().Local().Format("2006/01/02 15:04:05.999 ") + string(bytes))
+}
 

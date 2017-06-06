@@ -19,12 +19,8 @@ type MainHandler struct {
 	Bucket string
 }
 
-func (h *MainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ip := r.Header.Get("X-Real-IP")
-	if ip == "" {
-		ip = r.RemoteAddr
-	}
-	log.Printf("[%v] [%v] [%v]\n", ip, r.Method, r.RequestURI)
+func (h *MainHandler) ServeHTTP(ow http.ResponseWriter, r *http.Request) {
+	w := NewResponseWriter(ow)
 	switch r.Method {
 	case "HEAD":
 		h.ServeHead(w, r)
@@ -33,6 +29,11 @@ func (h *MainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		h.ServeDefault(w, r)
 	}
+	ip := r.Header.Get("X-Real-IP")
+	if ip == "" {
+		ip = r.RemoteAddr
+	}
+	log.Printf("[%v]\t[%v]\t[%v]\t[%fms]\t[%v]\n", ip, r.Method, w.StatusCode, w.CostTime().Seconds() * 1000, r.RequestURI)
 }
 
 func (h *MainHandler) ServeHead(w http.ResponseWriter, r *http.Request) {
