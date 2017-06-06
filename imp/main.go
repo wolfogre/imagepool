@@ -17,6 +17,8 @@ import (
 	"qiniupkg.com/api.v7/kodo"
 	"qiniupkg.com/api.v7/kodocli"
 	"qiniupkg.com/x/errors.v7"
+	"runtime"
+	"os/exec"
 )
 
 func main() {
@@ -37,11 +39,19 @@ func main() {
 
 	url := "http://" + config.Domain + "/" + key
 	if err := head(url); err != nil {
-		fmt.Println("Head failed: ",err.Error())
+		fmt.Println("Head failed: ", err.Error())
 		return
 	}
 
+	fmt.Println()
 	fmt.Println(url)
+
+	fmt.Println()
+	if err := clip(url); err != nil {
+		fmt.Println("copy failed: ", err.Error())
+	} else {
+		fmt.Println("copied!")
+	}
 }
 
 var config struct{
@@ -175,4 +185,22 @@ func head(url string) error {
 		return errors.New(fmt.Sprintf("%v return %v", url, resp.StatusCode))
 	}
 	return nil
+}
+
+func clip(content string) error {
+	if runtime.GOOS != "windows" {
+		return errors.New("Only supports Windows for now")
+	}
+	cmd := exec.Command("clip")
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, content)
+	}()
+
+	err = cmd.Run()
+	return err
 }
