@@ -12,13 +12,13 @@ import (
 	"encoding/hex"
 	"strings"
 	"net/http"
-
-	"qiniupkg.com/api.v7/conf"
-	"qiniupkg.com/api.v7/kodo"
-	"qiniupkg.com/api.v7/kodocli"
-	"qiniupkg.com/x/errors.v7"
-	"runtime"
+	"errors"
 	"os/exec"
+	"context"
+	"runtime"
+
+	"github.com/qiniu/api.v7/auth/qbox"
+	"github.com/qiniu/api.v7/storage"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 		fmt.Println("Load config failed: " + err.Error())
 		return
 	}
-	if (len(os.Args) < 2) {
+	if len(os.Args) < 2 {
 		fmt.Println("Please input file path or url")
 		return
 	}
@@ -100,21 +100,23 @@ func upload(path string) (string, error) {
 		return "", err
 	}
 	hash := hex.EncodeToString(hasher.Sum(nil))
-	reader.Seek(0, os.SEEK_SET)
+	reader.Seek(0, io.SeekStart)
 
 	key := hash
 	if strings.LastIndex(path, ".") != -1 {
 		key = key + path[strings.LastIndex(path, "."):]
 	}
 
-	conf.ACCESS_KEY = config.Access
-	conf.SECRET_KEY = config.Secret
-	token := kodo.New(0, nil).MakeUptoken(&kodo.PutPolicy{
+	putPolicy := &storage.PutPolicy{
 		Scope: config.Bucket,
-		Expires: 3600,
+	}
+	upToken := putPolicy.UploadToken(qbox.NewMac(config.Access, config.Secret))
+	formUploader := storage.NewFormUploader(&storage.Config{
+		Zone: &storage.ZoneHuadong,
+		UseHTTPS: false,
+		UseCdnDomains: false,
 	})
-	uploader := kodocli.NewUploader(0, nil)
-	return key, uploader.Put(nil, nil, token, key, reader, int64(reader.Len()), nil)
+	return key, formUploader.Put(context.Background(), nil, upToken, key, reader, int64(reader.Len()), nil)
 }
 
 func loadConfig() error {

@@ -4,21 +4,19 @@ import (
 	"net/http"
 	"log"
 	"time"
-
-	"qiniupkg.com/api.v7/kodo"
-	"github.com/go-redis/redis"
-	"strings"
-	"strconv"
-	"qiniupkg.com/api.v7/auth/qbox"
 	"sync"
+
+	"gopkg.in/redis.v3"
+	"github.com/qiniu/api.v7/auth/qbox"
+	"github.com/qiniu/api.v7/storage"
 )
 
 type MainHandler struct {
-	Kodo   *kodo.Client
-	Redis  *redis.Client
-	Domain string
-	Bucket string
-	StatusCount int
+	Mac             *qbox.Mac
+	Redis           *redis.Client
+	Domain          string
+	Bucket          string
+	StatusCount     int
 	StatusCountLock sync.Mutex
 }
 
@@ -59,10 +57,15 @@ func (h *MainHandler) ServeHead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := r.RequestURI[1:]
-	bucket := h.Kodo.Bucket(h.Bucket)
 
-	if _, err := bucket.Stat(nil, key); err != nil {
+	key := r.RequestURI[1:]
+	bucketManager := storage.NewBucketManager(h.Mac, &storage.Config{
+		Zone: &storage.ZoneHuadong,
+		UseHTTPS: false,
+		UseCdnDomains: false,
+	})
+
+	if _, err := bucketManager.Stat(h.Bucket, key); err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -100,8 +103,12 @@ func (h *MainHandler) ServeGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err == redis.Nil {
-		bucket := h.Kodo.Bucket(h.Bucket)
-		if _, err := bucket.Stat(nil, key); err != nil {
+		bucketManager := storage.NewBucketManager(h.Mac, &storage.Config{
+			Zone: &storage.ZoneHuadong,
+			UseHTTPS: false,
+			UseCdnDomains: false,
+		})
+		if _, err := bucketManager.Stat(h.Bucket, key); err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("404 - Not Found\n"))
 			return
@@ -114,7 +121,11 @@ func (h *MainHandler) ServeGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := makePrivateUrl(h.Kodo, kodo.MakeBaseUrl(h.Domain, key))
+	now := time.Now()
+	zero := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	var expires int64 = 24 * 60 * 60 // one day
+	deadline := zero.Unix() + expires
+	url := storage.MakePrivateURL(h.Mac, h.Domain, key, deadline)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 	return
 }
@@ -122,22 +133,4 @@ func (h *MainHandler) ServeGet(w http.ResponseWriter, r *http.Request) {
 func (h *MainHandler) ServeDefault(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusMethodNotAllowed)
 	w.Write([]byte("405 - Method Not Allowed\n"))
-}
-
-// Like kodo.Client{}.MakePrivateUrl()
-func makePrivateUrl(client *kodo.Client, baseUrl string) string{
-	now := time.Now()
-	zero := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	var expires int64 = 24 * 60 * 60 // one day
-	deadline := zero.Unix() + expires
-
-	if strings.Contains(baseUrl, "?") {
-		baseUrl += "&e="
-	} else {
-		baseUrl += "?e="
-	}
-	baseUrl += strconv.FormatInt(deadline, 10)
-
-	token := qbox.Sign(qbox.NewMac(client.AccessKey, client.SecretKey), []byte(baseUrl))
-	return baseUrl + "&token=" + token
 }

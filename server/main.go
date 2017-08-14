@@ -5,11 +5,10 @@ import (
 	"log"
 	"flag"
 	"fmt"
-
-	"github.com/go-redis/redis"
-	"qiniupkg.com/api.v7/kodo"
-	"qiniupkg.com/api.v7/conf"
 	"time"
+
+	"gopkg.in/redis.v3"
+	"github.com/qiniu/api.v7/auth/qbox"
 )
 
 // TODO 添加资源回收的逻辑
@@ -20,7 +19,7 @@ func main() {
 	port := flag.Int("port", 46243, "Server port")
 	redis_addr := flag.String("redis", "", "Server port")
 	redis_pass := flag.String("pass", "", "Redis password")
-	redis_db := flag.Int("db", 0, "Server port")
+	redis_db := flag.Int64("db", 0, "Server port")
 	bucket := flag.String("bucket", "", "Bucket")
 	domain := flag.String("domain", "", "Domain")
 	flag.Parse()
@@ -29,22 +28,17 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	conf.ACCESS_KEY = *access
-	conf.SECRET_KEY = *secret
-	rc := redis.NewClient(&redis.Options{
-		Addr: *redis_addr,
-		Password: *redis_pass,
-		DB: *redis_db,
-	})
-	kc := kodo.New(0, nil)
-
 
 	log.SetFlags(0)
 	log.SetOutput(NewLogWriter{})
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *port), &MainHandler{
-		Kodo: kc,
-		Redis: rc,
+		Mac:    qbox.NewMac(*access, *secret),
+		Redis:  redis.NewClient(&redis.Options{
+			Addr: *redis_addr,
+			Password: *redis_pass,
+			DB: *redis_db,
+		}),
 		Domain: *domain,
 		Bucket: *bucket,
 	}))
