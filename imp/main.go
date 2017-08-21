@@ -19,6 +19,7 @@ import (
 
 	"github.com/qiniu/api.v7/auth/qbox"
 	"github.com/qiniu/api.v7/storage"
+	"path"
 )
 
 func main() {
@@ -61,12 +62,12 @@ var config struct{
 	Domain string `json:"domain"`
 }
 
-func upload(path string) (string, error) {
+func upload(filename string) (string, error) {
 	var buffer []byte
 
-	if strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "http://") {
+	if strings.HasPrefix(filename, "https://") || strings.HasPrefix(filename, "http://") {
 		client := http.Client{}
-		req, err := http.NewRequest("GET", path, nil)
+		req, err := http.NewRequest("GET", filename, nil)
 		if err != nil {
 			return "", err
 		}
@@ -75,7 +76,7 @@ func upload(path string) (string, error) {
 			return "", err
 		}
 		if resp.StatusCode != http.StatusOK {
-			return "", errors.New(fmt.Sprintf("%v return %v", path, resp.StatusCode))
+			return "", errors.New(fmt.Sprintf("%v return %v", filename, resp.StatusCode))
 		}
 		buffer, err = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
@@ -83,7 +84,7 @@ func upload(path string) (string, error) {
 			return "", err
 		}
 	} else {
-		file, err := os.Open(path)
+		file, err := os.Open(filename)
 		if err != nil {
 			return "", err
 		}
@@ -102,10 +103,7 @@ func upload(path string) (string, error) {
 	hash := hex.EncodeToString(hasher.Sum(nil))
 	reader.Seek(0, io.SeekStart)
 
-	key := hash
-	if strings.LastIndex(path, ".") != -1 {
-		key = key + path[strings.LastIndex(path, "."):]
-	}
+	key := hash + path.Ext(filename)
 
 	putPolicy := &storage.PutPolicy{
 		Scope: config.Bucket,
