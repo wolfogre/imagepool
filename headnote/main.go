@@ -25,8 +25,9 @@ func main() {
 		count = 0
 		sum = 0
 		record = make(map[string]string)
-		filepath.Walk(`C:\Users\wolfo\AppData\Local\YNote\data\`, walkfunc)
-		filepath.Walk(`E:\blog`, walkfunc)
+		for i := 1; i < len(os.Args); i++ {
+			filepath.Walk(os.Args[i], walkfunc)
+		}
 		log.Printf("%v files, %v MB", count, float64(sum) / (1024 * 1024))
 		time.Sleep(time.Hour)
 	}
