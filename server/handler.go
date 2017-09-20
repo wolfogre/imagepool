@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 	"sync"
+	"fmt"
 
 	"gopkg.in/redis.v3"
 	"github.com/qiniu/api.v7/auth/qbox"
@@ -65,7 +66,8 @@ func (h *MainHandler) ServeHead(w http.ResponseWriter, r *http.Request) {
 		UseCdnDomains: false,
 	})
 
-	if _, err := bucketManager.Stat(h.Bucket, key); err != nil {
+	info, err := bucketManager.Stat(h.Bucket, key);
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -76,6 +78,7 @@ func (h *MainHandler) ServeHead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Length", fmt.Sprintf("%v", info.Fsize))
 	w.WriteHeader(http.StatusOK)
 	return
 }
