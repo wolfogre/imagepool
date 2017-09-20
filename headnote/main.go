@@ -16,12 +16,17 @@ import (
 
 var (
 	reg = regexp.MustCompile(`!\[.*]\((?P<url>.*)\)`)
+	record map[string]string
 	count, sum int64
 )
 
 func main() {
 	for {
+		count = 0
+		sum = 0
+		record = make(map[string]string)
 		filepath.Walk(`C:\Users\wolfo\AppData\Local\YNote\data\`, walkfunc)
+		filepath.Walk(`E:\blog`, walkfunc)
 		log.Printf("%v files, %v MB", count, float64(sum) / (1024 * 1024))
 		time.Sleep(time.Hour)
 	}
@@ -52,6 +57,11 @@ func walkfunc(p string, i os.FileInfo, e error) error {
 	for _, v := range matchs {
 		if strings.HasPrefix(v[1], "http://image.wolfogre.com") {
 			log.Println(v[1])
+			if _, ok := record[v[1]]; ok {
+				continue
+			} else {
+				record[v[1]] = v[1]
+			}
 			resp, err := http.Head(v[1])
 			if err != nil {
 				return err
