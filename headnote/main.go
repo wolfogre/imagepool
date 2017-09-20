@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 )
 
 var (
@@ -19,8 +20,11 @@ var (
 )
 
 func main() {
-	filepath.Walk(`C:\Users\wolfo\AppData\Local\YNote\data\`, walkfunc)
-	log.Println(count, " ", sum)
+	for {
+		filepath.Walk(`C:\Users\wolfo\AppData\Local\YNote\data\`, walkfunc)
+		log.Printf("%v files, %v MB", count, float64(sum) / (1024 * 1024))
+		time.Sleep(time.Hour)
+	}
 }
 
 func walkfunc(p string, i os.FileInfo, e error) error {
