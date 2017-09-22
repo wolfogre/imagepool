@@ -66,7 +66,7 @@ func (h *MainHandler) ServeHead(w http.ResponseWriter, r *http.Request) {
 		UseCdnDomains: false,
 	})
 
-	info, err := bucketManager.Stat(h.Bucket, key);
+	info, err := bucketManager.Stat(h.Bucket, key)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -129,7 +129,7 @@ func (h *MainHandler) ServeGet(w http.ResponseWriter, r *http.Request) {
 	var expires int64 = 24 * 60 * 60 // one day
 	deadline := zero.Unix() + expires
 	url := storage.MakePrivateURL(h.Mac, h.Domain, key, deadline)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "http://" + url, http.StatusTemporaryRedirect)
 	return
 }
 
