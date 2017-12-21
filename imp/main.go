@@ -110,7 +110,7 @@ func upload(filename string) (string, error) {
 	}
 	upToken := putPolicy.UploadToken(qbox.NewMac(config.Access, config.Secret))
 	formUploader := storage.NewFormUploader(&storage.Config{
-		Zone: &storage.ZoneHuanan,
+		Zone: &storage.ZoneHuadong,
 		UseHTTPS: false,
 		UseCdnDomains: false,
 	})
