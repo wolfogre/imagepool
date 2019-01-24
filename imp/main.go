@@ -114,7 +114,7 @@ func upload(filename string) (string, error) {
 		UseHTTPS: false,
 		UseCdnDomains: false,
 	})
-	return key, formUploader.Put(context.Background(), nil, upToken, key, reader, int64(reader.Len()), nil)
+	return key, formUploader.Put(context.Background(), nil, upToken, key, reader, int64(reader.Len()), &storage.PutExtra{})
 }
 
 func loadConfig() error {
